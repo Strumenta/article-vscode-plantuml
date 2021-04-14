@@ -353,20 +353,28 @@
   ],
   "scripts": {
     "vscode:prepublish": "npm run buildsyntax && tsc -p ./",
+    "build-parser": "antlr4ts -o src/parser -Xexact-output-dir -visitor src/grammar/*.g4",
     "compile": "tsc -p ./",
+    "test": "ts-node ./test/runTests.ts",
     "watch": "tsc -watch -p ./",
     "buildsyntax": "node ./scripts/build-syntax.js"
   },
   "devDependencies": {
-    "@types/mocha": "^2.2.32",
+    "@types/mocha": "^8.2.2",
     "@types/node": "^6.0.40",
-    "@types/vscode": "^1.39.0",
+    "@types/vscode": "^1.55.0",
+    "antlr4ts-cli": "^0.5.0-alpha.4",
+    "chai": "^4.2.0",
     "js-yaml": "^3.13.1",
     "markdown-it": "^8.3.2",
+    "mocha": "^8.3.2",
     "plist": "^3.0.2",
-    "typescript": "^3.7.2"
+    "ts-node": "^8.8.2",
+    "typescript": "^3.7.2",
+    "vscode-test": "^1.5.2"
   },
   "dependencies": {
+    "antlr4ts": "^0.5.0-alpha.4",
     "linq-collections": "*",
     "vscode-nls": "^2.0.2"
   }

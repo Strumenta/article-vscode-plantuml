@@ -6,12 +6,9 @@
 // The module 'assert' provides assertion methods from node
 import * as assert from 'assert';
 
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import * as vscode from 'vscode';
-import * as myExtension from '../src/extension';
-import { MatchPositions, UnmatchedText } from '../src/plantuml/formatter/matchPositions';
+import { MatchPositions} from '../src/plantuml/formatter/matchPositions';
 import { MultiRegExp2Match, MultiRegExp2 } from '../src/plantuml/formatter/multiRegExp2'
+import { suite, test } from "mocha"
 
 // Defines a Mocha test suite to group tests of similar kind together
 suite("Formatter Tests", () => {

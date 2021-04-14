@@ -21,7 +21,7 @@ import { CommandURLCurrent } from './commands/urlCurrent';
 import { CommandURLDocument } from './commands/urlDocument';
 import { CommandExtractSource } from './commands/extractSource';
 import { CommandToggleWorkspaceTrust } from './commands/toggleWorkspaceTrust';
-import { plantumlPlugin } from './markdown-it-plantuml/index';
+import { plantumlPlugin } from './markdown-it-plantuml';
 import { Diagnoser } from './providers/diagnoser';
 
 // this method is called when your extension is activated
