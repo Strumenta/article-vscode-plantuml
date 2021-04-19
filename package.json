@@ -374,6 +374,7 @@
     "vscode-test": "^1.5.2"
   },
   "dependencies": {
+    "antlr4-c3": "^1.1.16",
     "antlr4ts": "^0.5.0-alpha.4",
     "linq-collections": "*",
     "vscode-nls": "^2.0.2"

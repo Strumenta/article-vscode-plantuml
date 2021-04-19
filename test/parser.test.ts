@@ -50,4 +50,23 @@ class Bar
         expect(file.uml()[0].diagram()[1].class_diagram()).not.to.be.undefined;
         expect(file.uml()[0].diagram()[1].class_diagram().class_declaration().length).to.equal(1);
     });
+    test("Class declaration", () => {
+        const cs = CharStreams.fromString(`
+@startuml
+abstract class alias {
+    +{static} int PUBLIC_CLASS_VARIABLE
+    -string privateVariable
+    ~void packagePrivateMethod()
+    #{abstract} char protectedMethod(int param)
+}
+@enduml`);
+        const ts = new CommonTokenStream(new PumlgLexer(cs));
+        let parser = new PumlgParser(ts);
+        let file = parser.umlFile();
+        expect(parser.numberOfSyntaxErrors).to.equal(0);
+        expect(file.uml().length).to.equal(1);
+        expect(file.uml()[0].diagram().length).to.equal(1);
+        expect(file.uml()[0].diagram()[0].class_diagram()).not.to.be.undefined;
+        expect(file.uml()[0].diagram()[0].class_diagram().class_declaration().length).to.equal(1);
+    });
 });
