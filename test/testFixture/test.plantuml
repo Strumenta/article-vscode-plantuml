@@ -1,7 +1,13 @@
 fafasfasf
 
-@startuml 
-abstract        abstract
+@startuml
+class Foo
+class Bar
+Foo ..|> Bar
+@enduml
+
+@startuml
+abstract        abstract2
 class Foo {
     String data
 }

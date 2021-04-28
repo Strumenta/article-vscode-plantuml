@@ -29,18 +29,19 @@
 
 grammar Pumlg;
 
-umlFile: (.*? uml)* .*? EOF;
+umlFile: (diagram | (text=.* embeddedUml)* text=.*?) EOF;
 
-uml:
-    STARTUML
-     ((.*? NEWLINE) diagram (.*? NEWLINE))+
-    ENDUML;
+uml: (embeddedUml | diagram) EOF;
+embeddedUml: STARTUML ident? NEWLINE diagram? ENDUML;
 
 diagram: class_diagram;
 
-class_diagram
-    : ((class_declaration | connection | enum_declaration | hide_declaration) NEWLINE+)+
+class_diagram:
+    (class_diagram_noise_line*
+     (class_declaration | connection | enum_declaration | hide_declaration)
+     (class_diagram_noise_line | NEWLINE)+)+
     ;
+class_diagram_noise_line: ~(CLASS | ENUM | HIDE | CONNECTOR | NEWLINE) .*? NEWLINE;
 
 class_declaration:
     class_type ident (LCURLY
@@ -86,9 +87,10 @@ connection:
     ;
 
 visibility:
-    PLUS     # visibility_public
+    PLUS      # visibility_public
     |MINUS    # visibility_private
     |SHARP    # visibility_protected
+    |TILDE    # visibility_package
     ;
 
 function_argument:
@@ -109,7 +111,7 @@ template_argument_list:
     ;
 
 ident:
-    IDENT
+    IDENT | ABSTRACT | CLASS
     ;
 
 modifiers: STATIC_MOD | ABSTRACT_MOD;
@@ -150,6 +152,7 @@ DQUOTE: '"';
 COLON: ':';
 SHARP: '#';
 COMMA: ',';
+TILDE: '~';
 STATIC_MOD: '{static}';
 ABSTRACT_MOD: '{abstract}';
 STEREO_BEGIN: '<<';

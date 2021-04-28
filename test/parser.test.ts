@@ -25,14 +25,14 @@ sit amet`);
         let parser = new PumlgParser(ts);
         const file = parser.umlFile();
         expect(parser.numberOfSyntaxErrors).to.equal(0);
-        expect(file.uml().length).to.equal(1);
+        expect(file.embeddedUml().length).to.equal(1);
     });
     test("Arbitrary text inside diagram", () => {
         const cs = CharStreams.fromString(`
 @startuml
 This is not valid plantUml: but we don't care. The parser must be lenient.
 class Foo //We do care about this.
-We can have stuff after the class diagram: we'll ignore it.
+We can have stuff after the diagram: we'll ignore it.
 We can have blank lines:
 
 Or lines with the word "class" in them, like this.
@@ -43,12 +43,10 @@ class Bar
         let parser = new PumlgParser(ts);
         let file = parser.umlFile();
         expect(parser.numberOfSyntaxErrors).to.equal(0);
-        expect(file.uml().length).to.equal(1);
-        expect(file.uml()[0].diagram().length).to.equal(2);
-        expect(file.uml()[0].diagram()[0].class_diagram()).not.to.be.undefined;
-        expect(file.uml()[0].diagram()[0].class_diagram().class_declaration().length).to.equal(1);
-        expect(file.uml()[0].diagram()[1].class_diagram()).not.to.be.undefined;
-        expect(file.uml()[0].diagram()[1].class_diagram().class_declaration().length).to.equal(1);
+        expect(file.embeddedUml().length).to.equal(1);
+        expect(file.embeddedUml()[0].diagram()).not.to.be.undefined;
+        expect(file.embeddedUml()[0].diagram().class_diagram()).not.to.be.undefined;
+        expect(file.embeddedUml()[0].diagram().class_diagram().class_declaration().length).to.equal(2);
     });
     test("Class declaration", () => {
         const cs = CharStreams.fromString(`
@@ -64,9 +62,12 @@ abstract class alias {
         let parser = new PumlgParser(ts);
         let file = parser.umlFile();
         expect(parser.numberOfSyntaxErrors).to.equal(0);
-        expect(file.uml().length).to.equal(1);
-        expect(file.uml()[0].diagram().length).to.equal(1);
-        expect(file.uml()[0].diagram()[0].class_diagram()).not.to.be.undefined;
-        expect(file.uml()[0].diagram()[0].class_diagram().class_declaration().length).to.equal(1);
+        expect(file.embeddedUml().length).to.equal(1);
+        expect(file.embeddedUml()[0].diagram()).not.to.be.undefined;
+        const classDiagram = file.embeddedUml()[0].diagram().class_diagram();
+        expect(classDiagram).not.to.be.undefined;
+        expect(classDiagram.class_declaration().length).to.equal(1);
+        expect(classDiagram.class_declaration()[0].attribute().length).to.equal(2);
+        expect(classDiagram.class_declaration()[0].method().length).to.equal(2);
     });
 });

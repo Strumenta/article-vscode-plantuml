@@ -7,9 +7,10 @@ import {Lexer} from "antlr4ts/Lexer";
 import {CodeCompletionCore} from "antlr4-c3";
 import {CharStreams, CommonToken, CommonTokenStream} from "antlr4ts";
 import {PumlgLexer} from "../parser/PumlgLexer";
-import {PumlgParser, UmlContext} from "../parser/PumlgParser";
+import {DiagramContext, PumlgParser, UmlContext} from "../parser/PumlgParser";
 import {ParserRuleContext} from "antlr4ts/ParserRuleContext";
 import {ExtractNamesVisitor} from "../plantuml/intellisense/extractNamesVisitor";
+import {diagramAt} from "../plantuml/diagram/tools";
 
 export type CaretPosition = { line: number, column: number };
 export type TokenPosition = { index: number, token: Token, context?: ParseTree, text: string };
@@ -34,20 +35,18 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
 
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken)
         : vscode.CompletionItem[] {
-        const input = CharStreams.fromString(document.getText());
+        const diagram = diagramAt(document, position);
+
+        const input = CharStreams.fromString(document.getText(new vscode.Range(diagram.start, diagram.end)));
         const lexer = new PumlgLexer(input);
         const tokenStream = new CommonTokenStream(lexer);
         const parser = new PumlgParser(tokenStream);
 
-        const caretPosition: CaretPosition = { line: position.line + 1, column: position.character };
-        const parseTree = parser.umlFile();
+        const caretPosition: CaretPosition = { line: position.line + 1 - diagram.start.line, column: position.character };
+        const parseTree = parser.uml();
         let tkPos = this.computeTokenPosition(caretPosition, parseTree, tokenStream.getTokens());
         if (!tkPos) {
             tkPos = { index: 0, text: '', token: new CommonToken(-1), context: parseTree }
-        }
-        let diagram = tkPos.context;
-        while(diagram && !(diagram instanceof UmlContext)) {
-            diagram = diagram.parent;
         }
         const core = new CodeCompletionCore(parser);
         core.ignoredTokens = new Set<number>([
@@ -57,7 +56,7 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
             PumlgLexer.LPAREN, PumlgLexer.LCURLY, PumlgLexer.LSQUARE,
             PumlgLexer.RPAREN, PumlgLexer.RCURLY, PumlgLexer.RSQUARE,]);
         core.preferredRules = new Set<number>([PumlgParser.RULE_class_name]);
-        let candidates = core.collectCandidates(tkPos.index, diagram as ParserRuleContext);
+        let candidates = core.collectCandidates(tkPos.index, parseTree);
         const suggestions: CompletionItem[] = [];
         if(candidates.rules.size > 0) {
             const visitor = new ExtractNamesVisitor();
