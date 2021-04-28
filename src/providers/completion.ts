@@ -7,7 +7,9 @@ import {Lexer} from "antlr4ts/Lexer";
 import {CodeCompletionCore} from "antlr4-c3";
 import {CharStreams, CommonToken, CommonTokenStream} from "antlr4ts";
 import {PumlgLexer} from "../parser/PumlgLexer";
-import {PumlgParser} from "../parser/PumlgParser";
+import {PumlgParser, UmlContext} from "../parser/PumlgParser";
+import {ParserRuleContext} from "antlr4ts/ParserRuleContext";
+import {ExtractNamesVisitor} from "../plantuml/intellisense/extractNamesVisitor";
 
 export type CaretPosition = { line: number, column: number };
 export type TokenPosition = { index: number, token: Token, context?: ParseTree, text: string };
@@ -31,7 +33,7 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
     }
 
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken)
-        : Thenable<vscode.CompletionItem[]> {
+        : vscode.CompletionItem[] {
         const input = CharStreams.fromString(document.getText());
         const lexer = new PumlgLexer(input);
         const tokenStream = new CommonTokenStream(lexer);
@@ -43,13 +45,43 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
         if (!tkPos) {
             tkPos = { index: 0, text: '', token: new CommonToken(-1), context: parseTree }
         }
+        let diagram = tkPos.context;
+        while(diagram && !(diagram instanceof UmlContext)) {
+            diagram = diagram.parent;
+        }
         const core = new CodeCompletionCore(parser);
-        let candidates = core.collectCandidates(tkPos.index);
-        const keywords: string[] = [];
+        core.ignoredTokens = new Set<number>([
+            PumlgLexer.EOF, PumlgLexer.WS, PumlgLexer.ANYTHING_ELSE, PumlgLexer.NEWLINE,
+            PumlgLexer.COLON, PumlgLexer.COMMA,
+            PumlgLexer.BLOCK_COMMENT,
+            PumlgLexer.LPAREN, PumlgLexer.LCURLY, PumlgLexer.LSQUARE,
+            PumlgLexer.RPAREN, PumlgLexer.RCURLY, PumlgLexer.RSQUARE,]);
+        core.preferredRules = new Set<number>([PumlgParser.RULE_class_name]);
+        let candidates = core.collectCandidates(tkPos.index, diagram as ParserRuleContext);
+        const suggestions: CompletionItem[] = [];
+        if(candidates.rules.size > 0) {
+            const visitor = new ExtractNamesVisitor();
+            if(candidates.rules.has(PumlgParser.RULE_class_name)) {
+                visitor.visit(parseTree);
+                for(const name of visitor.classNames) {
+                    suggestions.push({ label: name, kind: CompletionItemKind.Class, sortText: `00_${name}` });
+                }
+            }
+        }
         candidates.tokens.forEach((l, k) => {
             if (k == PumlgParser.IDENT) {
                 return;
                 //Skip, we’ve already handled it above
+            }
+            if(k == PumlgParser.CONNECTOR) {
+                const connectors = [
+                    '--', '..', '-->', '<--', '--*', '*--', '--o', 'o--', '<|--', '--|>', '..|>', '<|..',
+                    '*-->', '<--*', 'o-->', '<--o', '.', '->', '<-', '-*', '*-', '-o', 'o-', '<|-', '-|>', '.|>', '<|.',
+                    '*->', '<-*', 'o->', '<-o'];
+                connectors.forEach((c, i) => {
+                    suggestions.push({ label: c, kind: CompletionItemKind.Keyword, sortText: `01_${i}` });
+                })
+                return;
             }
             let suggestion = '';
             [k, ...l].forEach(i => {
@@ -62,15 +94,11 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
                 }
             });
             if (suggestion) {
-                keywords.push(suggestion);
+                const name = suggestion.toLowerCase();
+                suggestions.push({ label: name, kind: CompletionItemKind.Keyword, sortText: `02_${name}` });
             }
         });
-        return new Promise<vscode.CompletionItem[]>(resolve => {
-            const suggestions: CompletionItem[] = keywords.map(k => {
-                return { label: k, kind: CompletionItemKind.Keyword }
-            });
-            resolve(suggestions);
-        });
+        return suggestions;
         /*let diagram = diagramAt(document, position);
         return Promise.all([
             MacroCompletionItems(diagram, position, token),

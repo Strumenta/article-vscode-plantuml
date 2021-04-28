@@ -32,9 +32,9 @@ grammar Pumlg;
 umlFile: (.*? uml)* .*? EOF;
 
 uml:
-    '@startuml'
-     ((.*? NEWLINE)? diagram .*?)+
-    '@enduml';
+    STARTUML
+     ((.*? NEWLINE) diagram (.*? NEWLINE))+
+    ENDUML;
 
 diagram: class_diagram;
 
@@ -43,13 +43,12 @@ class_diagram
     ;
 
 class_declaration:
-    class_type ident ('{'
+    class_type ident (LCURLY
     (attribute | method | NEWLINE)*
-    '}' )?
+    RCURLY )?
     ;
 
-hide_declaration:
-    'hide' ident;
+hide_declaration: HIDE ident;
 
 attribute:
     visibility?
@@ -64,32 +63,32 @@ method:
     modifiers?
     type_declaration?
     ident
-    '(' function_argument_list? ')'
+    LPAREN function_argument_list? RPAREN
     NEWLINE
     ;
 
 connection_left:
-    instance=ident ('"' attrib=ident mult=multiplicity? '"')?
+    class_name (DQUOTE attrib=ident MULTIPLICITY? DQUOTE)?
     ;
 
 connection_right:
-    ('"' attrib=ident mult=multiplicity? '"')? instance=ident
+    (DQUOTE attrib=ident MULTIPLICITY? DQUOTE)? class_name
     ;
+
+class_name: ident;
 
 connection:
     left=connection_left
-    CONNECTOR
+    connector=(CONNECTOR | MINUS)
     right=connection_right
-    (':' stereotype)?
+    (COLON stereotype)?
     NEWLINE
     ;
 
-multiplicity: ('*' | '0..1' '0..*' | '1..*' | '1');
-
 visibility:
-    '+'     # visibility_public
-    |'-'    # visibility_private
-    |'#'    # visibility_protected
+    PLUS     # visibility_public
+    |MINUS    # visibility_private
+    |SHARP    # visibility_protected
     ;
 
 function_argument:
@@ -97,7 +96,7 @@ function_argument:
     ;
 
 function_argument_list:
-    function_argument (',' function_argument)*
+    function_argument (COMMA function_argument)*
     ;
 
 
@@ -106,32 +105,29 @@ template_argument:
     ;
 
 template_argument_list:
-    template_argument (',' template_argument)*
+    template_argument (COMMA template_argument)*
     ;
 
 ident:
     IDENT
     ;
 
-modifiers:
-    static_mod='{static}'
-    | abstract_mod='{abstract}'
-    ;
+modifiers: STATIC_MOD | ABSTRACT_MOD;
 
 stereotype:
-    '<<' name=ident('(' args+=ident ')')? '>>'
+    STEREO_BEGIN name=ident(LPAREN args+=ident RPAREN)? STEREO_END
     ;
 
 type_declaration:
-    ident '<' template_argument_list? '>'               # template_type
-    | ident '[' ']'                                     # list_type
-    | ident                                             # simple_type
+    ident TEMPLATE_TYPE_BEGIN template_argument_list? TEMPLATE_TYPE_END # template_type
+    | ident LSQUARE RSQUARE                                             # list_type
+    | ident                                                             # simple_type
     ;
 
 class_type:
-    'abstract' 'class'?
-    | 'class'
-    | 'interface' 'class'?
+    ABSTRACT CLASS?
+    | CLASS
+    | INTERFACE CLASS?
     ;
 
 item_list:
@@ -139,10 +135,35 @@ item_list:
     ;
 
 enum_declaration:
-    'enum' ident ('{' NEWLINE
+    ENUM ident (LCURLY NEWLINE
     item_list?
-    '}' )?
+    RCURLY )?
     ;
+
+LPAREN: '(';
+RPAREN: ')';
+LSQUARE: '[';
+RSQUARE: ']';
+LCURLY: '{';
+RCURLY: '}';
+DQUOTE: '"';
+COLON: ':';
+SHARP: '#';
+COMMA: ',';
+STATIC_MOD: '{static}';
+ABSTRACT_MOD: '{abstract}';
+STEREO_BEGIN: '<<';
+STEREO_END: '>>';
+TEMPLATE_TYPE_BEGIN: '<';
+TEMPLATE_TYPE_END: '>';
+
+STARTUML: '@startuml';
+INTERFACE: 'interface';
+HIDE: 'hide';
+ENUM: 'enum';
+ENDUML: '@enduml';
+CLASS: 'class';
+ABSTRACT: 'abstract';
 
 CONNECTOR:
     '--'
@@ -161,7 +182,6 @@ CONNECTOR:
     | '<--*'
     | 'o-->'
     | '<--o'
-    | '-'
     | '.'
     | '->'
     | '<-'
@@ -179,16 +199,19 @@ CONNECTOR:
     | '<-o'
     ;
 
-NEWPAGE : 'newpage' -> channel(HIDDEN)
-    ;
+MULTIPLICITY: ('*' | '0..1' '0..*' | '1..*' | '1');
+PLUS: '+';
+MINUS: '-';
 
-NEWLINE  :   [\r\n];
+NEWPAGE: 'newpage' -> channel(HIDDEN);
 
-IDENT : NONDIGIT ( DIGIT | NONDIGIT )*;
+NEWLINE: [\r\n];
+
+IDENT: NONDIGIT ( DIGIT | NONDIGIT )*;
 LINE_COMMENT: ('/' '/' .*? '\n') -> type(NEWLINE);
 BLOCK_COMMENT: ('/*' .*? '*/') -> channel(HIDDEN);
 
-WS  :   [ ]+ -> channel(HIDDEN);
+WS: [ ]+ -> channel(HIDDEN);
 
 ANYTHING_ELSE: .;
 
