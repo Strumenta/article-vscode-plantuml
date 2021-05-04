@@ -29,19 +29,19 @@
 
 grammar Pumlg;
 
-umlFile: (diagram | (text=.* embeddedUml)* text=.*?) EOF;
+umlFile: (text=.*? embeddedUml)* text=.*? EOF;
+uml: embeddedUml EOF;
 
-uml: (embeddedUml | diagram) EOF;
-embeddedUml: STARTUML ident? NEWLINE diagram? ENDUML;
+embeddedUml: STARTUML ident? NEWLINE+ diagram? ENDUML;
 
 diagram: class_diagram;
 
 class_diagram:
     (class_diagram_noise_line*
-     (class_declaration | connection | enum_declaration | hide_declaration)
-     (class_diagram_noise_line | NEWLINE)+)+
-    ;
-class_diagram_noise_line: ~(CLASS | ENUM | HIDE | CONNECTOR | NEWLINE) .*? NEWLINE;
+     (class_declaration | connection | enum_declaration | hide_declaration) NEWLINE
+     class_diagram_noise_line*)+ |
+     class_diagram_noise_line+;
+class_diagram_noise_line: (~(CLASS | ENUM | HIDE | CONNECTOR | NEWLINE) .*?)? NEWLINE;
 
 class_declaration:
     class_type ident (LCURLY

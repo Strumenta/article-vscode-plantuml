@@ -5,6 +5,14 @@ import {PumlgLexer} from "../src/parser/PumlgLexer";
 import {PumlgParser} from "../src/parser/PumlgParser";
 
 suite("Parser Tests", () => {
+    test("Empty diagram", () => {
+        const cs = CharStreams.fromString("@startuml\n@enduml");
+        const ts = new CommonTokenStream(new PumlgLexer(cs));
+        let parser = new PumlgParser(ts);
+        parser.uml();
+        expect(parser.numberOfSyntaxErrors).to.equal(0);
+        expect(parser.inputStream.index == parser.inputStream.size);
+    });
     test("Arbitrary text", () => {
         const cs = CharStreams.fromString("lorem ipsum\ndolor\nsit amet");
         const ts = new CommonTokenStream(new PumlgLexer(cs));

@@ -41,9 +41,9 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
         const lexer = new PumlgLexer(input);
         const tokenStream = new CommonTokenStream(lexer);
         const parser = new PumlgParser(tokenStream);
+        const parseTree = parser.uml();
 
         const caretPosition: CaretPosition = { line: position.line + 1 - diagram.start.line, column: position.character };
-        const parseTree = parser.uml();
         let tkPos = this.computeTokenPosition(caretPosition, parseTree, tokenStream.getTokens());
         if (!tkPos) {
             tkPos = { index: 0, text: '', token: new CommonToken(-1), context: parseTree }
@@ -51,6 +51,7 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
         const core = new CodeCompletionCore(parser);
         core.ignoredTokens = new Set<number>([
             PumlgLexer.EOF, PumlgLexer.WS, PumlgLexer.ANYTHING_ELSE, PumlgLexer.NEWLINE,
+            PumlgLexer.ABSTRACT_MOD, PumlgLexer.STATIC_MOD,
             PumlgLexer.COLON, PumlgLexer.COMMA,
             PumlgLexer.BLOCK_COMMENT,
             PumlgLexer.LPAREN, PumlgLexer.LCURLY, PumlgLexer.LSQUARE,

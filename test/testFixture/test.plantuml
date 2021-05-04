@@ -28,3 +28,10 @@ interface       interface
 
 
 <sdfafasf
+@enduml  
+@startuml
+fsdf
+adfdsf
+class FOo
+FOo *--> 
+@enduml
