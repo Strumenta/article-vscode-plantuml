@@ -7,10 +7,12 @@ import {Lexer} from "antlr4ts/Lexer";
 import {CodeCompletionCore} from "antlr4-c3";
 import {CharStreams, CommonToken, CommonTokenStream} from "antlr4ts";
 import {PumlgLexer} from "../parser/PumlgLexer";
-import {DiagramContext, PumlgParser, UmlContext} from "../parser/PumlgParser";
-import {ParserRuleContext} from "antlr4ts/ParserRuleContext";
+import {PumlgParser} from "../parser/PumlgParser";
 import {ExtractNamesVisitor} from "../plantuml/intellisense/extractNamesVisitor";
 import {diagramAt} from "../plantuml/diagram/tools";
+import {VariableCompletionItems} from "../plantuml/intellisense/variableCompletion";
+import {MacroCompletionItems} from "../plantuml/intellisense/macroCompletion";
+import {Diagram} from "../plantuml/diagram/diagram";
 
 export type CaretPosition = { line: number, column: number };
 export type TokenPosition = { index: number, token: Token, context?: ParseTree, text: string };
@@ -33,20 +35,28 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
         this._disposables && this._disposables.length && this._disposables.map(d => d.dispose());
     }
 
-    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken)
-        : vscode.CompletionItem[] {
+    public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken) {
         const diagram = diagramAt(document, position);
+        return Promise.all([
+            MacroCompletionItems(diagram, position, token),
+            this.computeSuggestions(diagram, position),
+            VariableCompletionItems(diagram, position, token),
+        ]).then(
+            results => [].concat(...results)
+        );
+    }
 
-        const input = CharStreams.fromString(document.getText(new vscode.Range(diagram.start, diagram.end)));
+    async computeSuggestions(diagram: Diagram, position: vscode.Position) {
+        const input = CharStreams.fromString(diagram.content);
         const lexer = new PumlgLexer(input);
         const tokenStream = new CommonTokenStream(lexer);
         const parser = new PumlgParser(tokenStream);
         const parseTree = parser.uml();
 
-        const caretPosition: CaretPosition = { line: position.line + 1 - diagram.start.line, column: position.character };
+        const caretPosition: CaretPosition = {line: position.line + 1 - diagram.start.line, column: position.character};
         let tkPos = this.computeTokenPosition(caretPosition, parseTree, tokenStream.getTokens());
         if (!tkPos) {
-            tkPos = { index: 0, text: '', token: new CommonToken(-1), context: parseTree }
+            tkPos = {index: 0, text: '', token: new CommonToken(-1), context: parseTree}
         }
         const core = new CodeCompletionCore(parser);
         core.ignoredTokens = new Set<number>([
@@ -59,12 +69,12 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
         core.preferredRules = new Set<number>([PumlgParser.RULE_class_name]);
         let candidates = core.collectCandidates(tkPos.index, parseTree);
         const suggestions: CompletionItem[] = [];
-        if(candidates.rules.size > 0) {
+        if (candidates.rules.size > 0) {
             const visitor = new ExtractNamesVisitor();
-            if(candidates.rules.has(PumlgParser.RULE_class_name)) {
+            if (candidates.rules.has(PumlgParser.RULE_class_name)) {
                 visitor.visit(parseTree);
-                for(const name of visitor.classNames) {
-                    suggestions.push({ label: name, kind: CompletionItemKind.Class, sortText: `00_${name}` });
+                for (const name of visitor.classNames) {
+                    suggestions.push({label: name, kind: CompletionItemKind.Class, sortText: `00_${name}`});
                 }
             }
         }
@@ -73,40 +83,31 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
                 return;
                 //Skip, we’ve already handled it above
             }
-            if(k == PumlgParser.CONNECTOR) {
+            if (k == PumlgParser.CONNECTOR) {
                 const connectors = [
                     '--', '..', '-->', '<--', '--*', '*--', '--o', 'o--', '<|--', '--|>', '..|>', '<|..',
                     '*-->', '<--*', 'o-->', '<--o', '.', '->', '<-', '-*', '*-', '-o', 'o-', '<|-', '-|>', '.|>', '<|.',
                     '*->', '<-*', 'o->', '<-o'];
                 connectors.forEach((c, i) => {
-                    suggestions.push({ label: c, kind: CompletionItemKind.Keyword, sortText: `01_${i}` });
+                    suggestions.push({label: c, kind: CompletionItemKind.Keyword, sortText: `01_${i}`});
                 })
                 return;
             }
             let suggestion = '';
             [k, ...l].forEach(i => {
-                const symbolicName = parser.vocabulary.getSymbolicName(i);
-                if(symbolicName) {
-                    if(suggestion) {
+                const symbolicName = parser.vocabulary.getSymbolicName(i)?.toLowerCase();
+                if (symbolicName) {
+                    if (suggestion) {
                         suggestion += " ";
                     }
                     suggestion += symbolicName;
                 }
             });
             if (suggestion) {
-                const name = suggestion.toLowerCase();
-                suggestions.push({ label: name, kind: CompletionItemKind.Keyword, sortText: `02_${name}` });
+                suggestions.push({label: suggestion, kind: CompletionItemKind.Keyword, sortText: `02_${suggestion}`});
             }
         });
         return suggestions;
-        /*let diagram = diagramAt(document, position);
-        return Promise.all([
-            MacroCompletionItems(diagram, position, token),
-            LanguageCompletionItems(),
-            VariableCompletionItems(diagram, position, token),
-        ]).then(
-            results => [].concat(...results)
-        )*/
     }
 
     resolveCompletionItem?(item: vscode.CompletionItem, token: vscode.CancellationToken): vscode.ProviderResult<vscode.CompletionItem> {
@@ -114,7 +115,7 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
         return null;
     }
 
-    findContext(parseTree: ParseTree, tokens: Token[], index: number, previous?: ParseTree): ParseTree | undefined {
+    findContext(parseTree: ParseTree, tokens: Token[], index: number): ParseTree | undefined {
         let token = tokens[index];
         while((token.type == Lexer.EOF || token.channel != Lexer.DEFAULT_TOKEN_CHANNEL) && index > 0) {
             index--;
@@ -131,8 +132,7 @@ export class Completion extends vscode.Disposable implements vscode.CompletionIt
             return undefined;
         }
         for(let i = 0; i < parseTree.childCount; i++) {
-            let prevChild = i > 0 ? parseTree.getChild(i - 1) : undefined;
-            const context = this.findContext(parseTree.getChild(i), tokens, index, prevChild);
+            const context = this.findContext(parseTree.getChild(i), tokens, index);
             if(context && !(context instanceof ErrorNode)) {
                 return context;
             }

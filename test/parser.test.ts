@@ -78,4 +78,16 @@ abstract class alias {
         expect(classDiagram.class_declaration()[0].attribute().length).to.equal(2);
         expect(classDiagram.class_declaration()[0].method().length).to.equal(2);
     });
+    test("Line comments are newlines", () => {
+        const cs = CharStreams.fromString(
+`class Foo {
+    bar //yes, I said bar
+    baz
+}`);
+        const ts = new CommonTokenStream(new PumlgLexer(cs));
+        let parser = new PumlgParser(ts);
+        let decl = parser.class_declaration();
+        expect(parser.numberOfSyntaxErrors).to.equal(0);
+        expect(decl.attribute().length).to.equal(2);
+    });
 });

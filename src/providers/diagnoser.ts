@@ -42,9 +42,9 @@ export class Diagnoser extends vscode.Disposable {
 
     diagnose(document: vscode.TextDocument) {
         if (document.languageId !== this.langID) return;
-        let diagrams = diagramsOf(document);
         let diagnostics: vscode.Diagnostic[] = [];
         let names = {};
+        let diagrams = diagramsOf(document);
         diagrams.map(d => {
             let range = document.lineAt(d.start.line).range;
             if (!d.titleRaw) {
@@ -95,7 +95,7 @@ export class Diagnoser extends vscode.Disposable {
 
             class ReportingParserErrorListener implements ANTLRErrorListener<Token> {
                 syntaxError? = <T extends Token>(recognizer: Recognizer<T, any>, offendingSymbol: T | undefined, line: number, charPositionInLine: number, msg: string, e: RecognitionException | undefined) => {
-                    let range = null;
+                    let range;
                     if(e) {
                         let token = e.getOffendingToken();
                         range = rangeOfToken(token, d);

@@ -33,5 +33,16 @@ interface       interface
 fsdf
 adfdsf
 class FOo
+class Bar
 FOo *--> 
+@enduml
+
+@startuml
+'This comment is correctly skipped
+class Foo {
+   bar 'This ought to be a comment, but
+   'This is skipped as well
+   baz /' PlantUML really
+has a bug here '/ quux ' and it's parsing everything as a single attribute!
+}
 @enduml

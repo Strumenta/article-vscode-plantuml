@@ -68,13 +68,8 @@ method:
     NEWLINE
     ;
 
-connection_left:
-    class_name (DQUOTE attrib=ident MULTIPLICITY? DQUOTE)?
-    ;
-
-connection_right:
-    (DQUOTE attrib=ident MULTIPLICITY? DQUOTE)? class_name
-    ;
+connection_left: class_name (DQUOTE attrib=ident MULTIPLICITY? DQUOTE)?;
+connection_right: (DQUOTE attrib=ident MULTIPLICITY? DQUOTE)? class_name;
 
 class_name: ident;
 
