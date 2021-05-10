@@ -1,5 +1,17 @@
 # PlantUML README
 
+This is the code accompanying the article "Writing an Editor for PlantUML".
+
+It's a fork of [vscode-plantuml by qjebbs](https://github.com/qjebbs/vscode-plantuml).
+We've added a parser to his VSCode extension, to improve on code completion ("IntelliSense") and to open the possibility
+of further improvements.
+
+The parser is generated with ANTLR from a modified version of [James Goppert's PlantUML grammar](https://github.com/jgoppert/pumlg/blob/master/src/pumlg/parser/Pumlg.g4).
+
+The original documentation of the extension follows below.
+
+## Original Documentation
+
 Rich PlantUML support for Visual Studio Code.
 
 [![Build Status](https://travis-ci.org/qjebbs/vscode-plantuml.svg?branch=master)](https://travis-ci.org/qjebbs/vscode-plantuml)
